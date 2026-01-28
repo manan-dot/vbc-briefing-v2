@@ -15,9 +15,9 @@ const parser = new Parser({
 });
 
 // Email recipients (add your team emails here)
-const DIGEST_RECIPIENTS = [
+const DIGEST_RECIPIENTS: string[] = [
   // Add Pear team email addresses here
-  // 'team@pearwith.us',
+  // 'manan@pearwith.us','sinchan@pearwith.us','ankit@pearwith.us','sdias@pearwith.us','wwatkins@pearwith.us','founder@pearwith.us','fblountjr@pearwith.us','jnichols@pearwith.us'
 ];
 
 interface RawArticle {
