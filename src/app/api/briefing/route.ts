@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Parser from 'rss-parser';
-import { RSS_FEEDS, SAMPLE_ARTICLES } from '@/lib/rss-feeds';
+import { RSS_FEEDS } from '@/lib/feeds';
 import { processArticles } from '@/lib/scoring';
 
 const parser = new Parser({
