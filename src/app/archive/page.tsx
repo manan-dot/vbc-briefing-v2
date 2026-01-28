@@ -22,7 +22,7 @@ export default function ArchivePage() {
   const [selectedIds, setSelectedIdsState] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all');
   const [activeTiers, setActiveTiers] = useState<Set<PriorityTier>>(
-    new Set(['high', 'medium', 'low'])
+    new Set<PriorityTier>(['high', 'medium', 'low'])
   );
   const [timeRange, setTimeRange] = useState(168); // Default: last week
   const [isLoading, setIsLoading] = useState(true);
