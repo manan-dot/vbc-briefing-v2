@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { scoreAndSortArticles } from '@/lib/scoring';
-import { fetchAllFeeds } from '@/lib/rss-feeds';
-import { ScoredArticle } from '@/types';
+import { processArticles } from '@/lib/scoring';
+import { fetchAllFeeds } from '@/lib/rss';
+import { ScoringResult } from '@/types';
 
 // Initialize Resend lazily to avoid build-time errors
 const getResendClient = () => {
@@ -19,11 +19,11 @@ const DIGEST_RECIPIENTS: string[] = [
 ];
 
 // Generate HTML email content
-function generateEmailHTML(articles: ScoredArticle[]): string {
+function generateEmailHTML(articles: ScoringResult[]): string {
   const highPriority = articles.filter(a => a.tier === 'high').slice(0, 5);
   const mediumPriority = articles.filter(a => a.tier === 'medium').slice(0, 5);
 
-  const formatArticle = (article: ScoredArticle) => `
+  const formatArticle = (article: ScoringResult) => `
     <tr>
       <td style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
         <a href="${article.link}" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 16px;">
@@ -99,7 +99,7 @@ function generateEmailHTML(articles: ScoredArticle[]): string {
 }
 
 // Generate plain text version
-function generateEmailText(articles: ScoredArticle[]): string {
+function generateEmailText(articles: ScoringResult[]): string {
   const highPriority = articles.filter(a => a.tier === 'high').slice(0, 5);
   const mediumPriority = articles.filter(a => a.tier === 'medium').slice(0, 5);
 
@@ -163,7 +163,7 @@ export async function GET(request: Request) {
 
     // Fetch and score articles from last 24 hours
     const rawArticles = await fetchAllFeeds(24);
-    const articles = scoreAndSortArticles(rawArticles);
+    const articles = processArticles(rawArticles);
 
     // Only send if we have high-priority articles
     const highPriorityCount = articles.filter(a => a.tier === 'high').length;
