@@ -119,5 +119,5 @@ export function getFeedsByCategory(category: string): FeedConfig[] {
 
 // Get all unique categories
 export function getCategories(): string[] {
-  return [...new Set(RSS_FEEDS.map((feed) => feed.category))];
+return Array.from(new Set(RSS_FEEDS.map((feed) => feed.category)));
 }
