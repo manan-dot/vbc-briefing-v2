@@ -1,208 +1,208 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import Parser from 'rss-parser';
-import { RSS_FEEDS, SAMPLE_ARTICLES } from '@/lib/rss-feeds';
-import { processArticles, getTopArticles } from '@/lib/scoring';
+import { scoreAndSortArticles } from '@/lib/scoring';
+import { fetchAllFeeds } from '@/lib/rss';
+import { ScoredArticle } from '@/types';
 
-// Initialize Resend (you'll need to add RESEND_API_KEY to env)
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend lazily to avoid build-time errors
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  return new Resend(apiKey);
+};
 
-const parser = new Parser({
-  timeout: 10000,
-  headers: {
-    'User-Agent': 'VBC-Briefing/2.0',
-  },
-});
-
-// Email recipients (add your team emails here)
+// Email recipients - add team emails here
 const DIGEST_RECIPIENTS: string[] = [
-  // Add Pear team email addresses here
-  // 'manan@pearwith.us','sinchan@pearwith.us','ankit@pearwith.us','sdias@pearwith.us','wwatkins@pearwith.us','founder@pearwith.us','fblountjr@pearwith.us','jnichols@pearwith.us'
+  // 'team@pearhealth.com',
 ];
 
-interface RawArticle {
-  title: string;
-  link: string;
-  description: string;
-  pubDate: string;
-  source: string;
-  sourceUrl: string;
-}
+// Generate HTML email content
+function generateEmailHTML(articles: ScoredArticle[]): string {
+  const highPriority = articles.filter(a => a.tier === 'high').slice(0, 5);
+  const mediumPriority = articles.filter(a => a.tier === 'medium').slice(0, 5);
 
-async function fetchFeed(feed: typeof RSS_FEEDS[0]): Promise<RawArticle[]> {
-  try {
-    const result = await parser.parseURL(feed.url);
-    return (result.items || []).map((item) => ({
-      title: String(item.title || ''),
-      link: String(item.link || ''),
-      description: String(item.contentSnippet || item.content || item.description || ''),
-      pubDate: String(item.pubDate || item.isoDate || new Date().toISOString()),
-      source: feed.name,
-      sourceUrl: feed.url,
-    }));
-  } catch (error) {
-    console.error(`Failed to fetch ${feed.name}:`, error);
-    return [];
-  }
-}
-
-function generateEmailHTML(topArticles: ReturnType<typeof processArticles>) {
-  const date = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  const articleHTML = topArticles
-    .map((article, index) => {
-      const tierEmoji =
-        article.tier === 'high' ? '🔴' : article.tier === 'medium' ? '🟡' : '🟢';
-
-      return `
-        <div style="margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; border-left: 4px solid ${
-          article.tier === 'high' ? '#ef4444' : article.tier === 'medium' ? '#f59e0b' : '#22c55e'
-        };">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
-            ${tierEmoji} ${article.tier.toUpperCase()} PRIORITY • ${article.source}
-          </div>
-          <h3 style="margin: 0 0 8px 0; font-size: 16px;">
-            <a href="${article.link}" style="color: #111827; text-decoration: none;">
-              ${index + 1}. ${article.title}
-            </a>
-          </h3>
-          <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">
-            ${article.description.slice(0, 200)}${article.description.length > 200 ? '...' : ''}
-          </p>
-          <a href="${article.link}" style="display: inline-block; margin-top: 8px; font-size: 12px; color: #059669;">
-            Read more →
-          </a>
-        </div>
-      `;
-    })
-    .join('');
+  const formatArticle = (article: ScoredArticle) => `
+    <tr>
+      <td style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+        <a href="${article.link}" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 16px;">
+          ${article.title}
+        </a>
+        <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+          ${article.summary.slice(0, 200)}${article.summary.length > 200 ? '...' : ''}
+        </p>
+        <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
+          ${article.source} • Score: ${article.score}
+        </p>
+      </td>
+    </tr>
+  `;
 
   return `
     <!DOCTYPE html>
     <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff;">
-        <div style="text-align: center; margin-bottom: 32px;">
-          <h1 style="color: #059669; margin: 0;">🌿 VBC Briefing</h1>
-          <p style="color: #6b7280; margin: 8px 0 0 0;">${date}</p>
-        </div>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
 
-        <div style="margin-bottom: 24px;">
-          <h2 style="font-size: 18px; color: #111827; margin: 0 0 16px 0;">
-            Today's Top 3 Stories
-          </h2>
-          ${articleHTML}
-        </div>
-
-        <div style="text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://vbc-briefing.vercel.app'}"
-             style="display: inline-block; background: #059669; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-            View Full Briefing
-          </a>
-          <p style="font-size: 12px; color: #9ca3af; margin-top: 16px;">
-            VBC Briefing • Curated for Pear Health
+        <!-- Header -->
+        <div style="background-color: #059669; padding: 24px; text-align: center;">
+          <h1 style="margin: 0; color: white; font-size: 24px;">🍐 VBC Daily Briefing</h1>
+          <p style="margin: 8px 0 0 0; color: #d1fae5; font-size: 14px;">
+            ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-      </body>
+
+        <!-- High Priority Section -->
+        ${highPriority.length > 0 ? `
+        <div style="padding: 24px;">
+          <h2 style="margin: 0 0 16px 0; color: #dc2626; font-size: 18px; display: flex; align-items: center;">
+            🔴 High Priority
+          </h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${highPriority.map(formatArticle).join('')}
+          </table>
+        </div>
+        ` : ''}
+
+        <!-- Medium Priority Section -->
+        ${mediumPriority.length > 0 ? `
+        <div style="padding: 24px; background-color: #f9fafb;">
+          <h2 style="margin: 0 0 16px 0; color: #d97706; font-size: 18px;">
+            🟡 Worth Reading
+          </h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${mediumPriority.map(formatArticle).join('')}
+          </table>
+        </div>
+        ` : ''}
+
+        <!-- Footer -->
+        <div style="padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://vbc-briefing-v2.vercel.app'}"
+             style="display: inline-block; background-color: #059669; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+            View All Articles
+          </a>
+          <p style="margin: 16px 0 0 0; color: #9ca3af; font-size: 12px;">
+            Pear Healthcare VBC Briefing • Curated for value-based care leaders
+          </p>
+        </div>
+
+      </div>
+    </body>
     </html>
   `;
 }
 
-export async function GET(request: Request) {
-  // Verify cron secret (for Vercel Cron)
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
+// Generate plain text version
+function generateEmailText(articles: ScoredArticle[]): string {
+  const highPriority = articles.filter(a => a.tier === 'high').slice(0, 5);
+  const mediumPriority = articles.filter(a => a.tier === 'medium').slice(0, 5);
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  let text = `🍐 VBC DAILY BRIEFING\n`;
+  text += `${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n\n`;
+
+  if (highPriority.length > 0) {
+    text += `🔴 HIGH PRIORITY\n${'='.repeat(40)}\n\n`;
+    highPriority.forEach(article => {
+      text += `${article.title}\n`;
+      text += `${article.link}\n`;
+      text += `${article.source} • Score: ${article.score}\n\n`;
+    });
   }
 
+  if (mediumPriority.length > 0) {
+    text += `🟡 WORTH READING\n${'='.repeat(40)}\n\n`;
+    mediumPriority.forEach(article => {
+      text += `${article.title}\n`;
+      text += `${article.link}\n`;
+      text += `${article.source} • Score: ${article.score}\n\n`;
+    });
+  }
+
+  text += `\nView all articles: ${process.env.NEXT_PUBLIC_APP_URL || 'https://vbc-briefing-v2.vercel.app'}`;
+
+  return text;
+}
+
+export async function GET(request: Request) {
   try {
-    // Fetch all feeds
-    const feedPromises = RSS_FEEDS.map(fetchFeed);
-    const feedResults = await Promise.allSettled(feedPromises);
+    // Verify cron secret for scheduled runs
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
 
-    let allArticles: RawArticle[] = [];
-    feedResults.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value.length > 0) {
-        allArticles = allArticles.concat(result.value);
+    // Allow manual triggers without auth in development
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      // Check if it's a Vercel cron job
+      const isVercelCron = request.headers.get('x-vercel-cron');
+      if (!isVercelCron) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-    });
-
-    if (allArticles.length === 0) {
-      allArticles = SAMPLE_ARTICLES;
-    }
-
-    // Filter to last 24 hours
-    const cutoff = new Date();
-    cutoff.setHours(cutoff.getHours() - 24);
-
-    const recentArticles = allArticles.filter((article) => {
-      try {
-        return new Date(article.pubDate) >= cutoff;
-      } catch {
-        return true;
-      }
-    });
-
-    // Process and get top 3
-    const processedArticles = processArticles(recentArticles.length > 0 ? recentArticles : allArticles);
-    const topArticles = getTopArticles(processedArticles, 3);
-
-    if (topArticles.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'No articles to send',
-      });
     }
 
     // Check if Resend is configured
-    if (!process.env.RESEND_API_KEY || DIGEST_RECIPIENTS.length === 0) {
+    const resend = getResendClient();
+    if (!resend) {
       return NextResponse.json({
-        success: false,
-        error: 'Email not configured. Set RESEND_API_KEY and add recipients.',
-        preview: {
-          topArticles: topArticles.map((a) => ({
-            title: a.title,
-            tier: a.tier,
-            score: a.score,
-          })),
-        },
+        error: 'Email service not configured',
+        message: 'Set RESEND_API_KEY environment variable'
+      }, { status: 503 });
+    }
+
+    // Check if we have recipients
+    if (DIGEST_RECIPIENTS.length === 0) {
+      return NextResponse.json({
+        error: 'No recipients configured',
+        message: 'Add email addresses to DIGEST_RECIPIENTS array'
+      }, { status: 400 });
+    }
+
+    // Fetch and score articles from last 24 hours
+    const rawArticles = await fetchAllFeeds(24);
+    const articles = scoreAndSortArticles(rawArticles);
+
+    // Only send if we have high-priority articles
+    const highPriorityCount = articles.filter(a => a.tier === 'high').length;
+    if (highPriorityCount === 0) {
+      return NextResponse.json({
+        message: 'No high-priority articles today, skipping digest',
+        articlesProcessed: articles.length
       });
     }
 
     // Send email
     const { data, error } = await resend.emails.send({
-      from: 'VBC Briefing <briefing@pearwith.us>',
+      from: 'VBC Briefing <briefing@pearhealth.com>',
       to: DIGEST_RECIPIENTS,
-      subject: `🌿 VBC Briefing: ${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
-      html: generateEmailHTML(topArticles),
+      subject: `🍐 VBC Briefing: ${highPriorityCount} High-Priority Articles`,
+      html: generateEmailHTML(articles),
+      text: generateEmailText(articles),
     });
 
     if (error) {
-      console.error('Email send error:', error);
-      return NextResponse.json({ success: false, error: error.message });
+      console.error('Failed to send digest:', error);
+      return NextResponse.json({ error: 'Failed to send email', details: error }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
-      emailId: data?.id,
+      messageId: data?.id,
       recipientCount: DIGEST_RECIPIENTS.length,
-      articlesIncluded: topArticles.length,
+      articlesIncluded: {
+        high: highPriorityCount,
+        medium: articles.filter(a => a.tier === 'medium').length
+      }
     });
+
   } catch (error) {
-    console.error('Digest API error:', error);
+    console.error('Digest error:', error);
     return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
