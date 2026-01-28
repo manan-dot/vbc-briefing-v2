@@ -57,14 +57,15 @@ async function fetchFeed(feedUrl: string, sourceName: string): Promise<Article[]
       id: generateId(item.title || '', item.link || ''),
       title: item.title || 'Untitled',
       link: item.link || '',
-      summary: cleanSummary(item.contentSnippet || item.content || item.summary),
+      description: cleanSummary(item.contentSnippet || item.content || item.summary),
       source: sourceName,
+      sourceUrl: feedUrl,
       pubDate: item.pubDate || item.isoDate || new Date().toISOString(),
       // These will be filled in by scoring
       score: 0,
       tier: 'low' as const,
       category: 'operations' as const,
-      matchedKeywords: [],
+      keywords: [],
     }));
   } catch (error) {
     console.error(`Failed to fetch feed ${sourceName}:`, error);
