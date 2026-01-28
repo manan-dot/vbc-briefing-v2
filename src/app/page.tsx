@@ -15,7 +15,7 @@ export default function TodayPage() {
   const [selectedIds, setSelectedIdsState] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all');
   const [activeTiers, setActiveTiers] = useState<Set<PriorityTier>>(
-    new Set(['high', 'medium', 'low'])
+    new Set<PriorityTier>(['high', 'medium', 'low'])
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export default function TodayPage() {
   // Toggle tier filter
   const toggleTier = (tier: PriorityTier) => {
     setActiveTiers((prev) => {
-      const next = new Set(prev);
+      const next = new Set<PriorityTier>(prev);
       if (next.has(tier)) {
         // Don't allow deselecting all tiers
         if (next.size > 1) {
@@ -194,7 +194,7 @@ export default function TodayPage() {
             <button
               onClick={() => {
                 setActiveCategory('all');
-                setActiveTiers(new Set(['high', 'medium', 'low']));
+                setActiveTiers(new Set<PriorityTier>(['high', 'medium', 'low']));
               }}
               className="mt-4 text-green-600 hover:text-green-700"
             >
