@@ -144,7 +144,7 @@ export default function ArchivePage() {
   // Toggle tier filter
   const toggleTier = (tier: PriorityTier) => {
     setActiveTiers((prev) => {
-      const next = new Set(prev);
+      const next = new Set<PriorityTier>(prev);
       if (next.has(tier)) {
         if (next.size > 1) {
           next.delete(tier);
@@ -229,7 +229,7 @@ export default function ArchivePage() {
             <button
               onClick={() => {
                 setActiveCategory('all');
-                setActiveTiers(new Set(['high', 'medium', 'low']));
+                setActiveTiers(new Set<PriorityTier>(['high', 'medium', 'low']));
               }}
               className="mt-4 text-green-600 hover:text-green-700"
             >
