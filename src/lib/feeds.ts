@@ -5,110 +5,86 @@ export interface FeedConfig {
 }
 
 export const RSS_FEEDS: FeedConfig[] = [
-  // Government & Policy
-  {
-    name: 'CMS Blog',
-    url: 'https://www.cms.gov/blog/rss',
-    category: 'policy-regulatory',
-  },
-  {
-    name: 'HHS News',
-    url: 'https://www.hhs.gov/rss/news.xml',
-    category: 'policy-regulatory',
-  },
-
-  // Premier Healthcare Publications
+  // Healthcare Publications - Verified Working Feeds
   {
     name: 'Health Affairs',
     url: 'https://www.healthaffairs.org/action/showFeed?type=etoc&feed=rss&jc=hlthaff',
     category: 'policy-regulatory',
   },
   {
-    name: 'NEJM',
-    url: 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss',
-    category: 'quality-outcomes',
-  },
-
-  // Healthcare News
-  {
-    name: 'Modern Healthcare',
-    url: 'https://www.modernhealthcare.com/rss',
-    category: 'operations',
+    name: 'Healthcare Dive',
+    url: 'https://www.healthcaredive.com/feeds/news/',
+    category: 'general',
   },
   {
     name: 'Fierce Healthcare',
     url: 'https://www.fiercehealthcare.com/rss/xml',
-    category: 'operations',
+    category: 'general',
   },
   {
-    name: 'Healthcare Dive',
-    url: 'https://www.healthcaredive.com/feeds/news/',
-    category: 'operations',
+    name: 'STAT News',
+    url: 'https://www.statnews.com/feed/',
+    category: 'general',
   },
-  {
-    name: 'Beckers Hospital Review',
-    url: 'https://www.beckershospitalreview.com/rss/rss.html',
-    category: 'operations',
-  },
-
-  // Technology & Innovation
   {
     name: 'Healthcare IT News',
-    url: 'https://www.healthcareitnews.com/rss',
-    category: 'ai-technology',
+    url: 'https://www.healthcareitnews.com/feed',
+    category: 'ai-tech',
   },
   {
     name: 'MobiHealthNews',
-    url: 'https://www.mobihealthnews.com/rss',
-    category: 'ai-technology',
+    url: 'https://www.mobihealthnews.com/feed',
+    category: 'ai-tech',
   },
   {
-    name: 'STAT News - Health Tech',
-    url: 'https://www.statnews.com/category/health-tech/feed/',
-    category: 'ai-technology',
-  },
-
-  // Value-Based Care Specific
-  {
-    name: 'HCPLAN',
-    url: 'https://hcp-lan.org/feed/',
-    category: 'payment-models',
+    name: 'KFF Health News',
+    url: 'https://kffhealthnews.org/feed/',
+    category: 'policy-regulatory',
   },
   {
-    name: 'NAACOS',
-    url: 'https://www.naacos.com/feed',
-    category: 'payment-models',
+    name: 'CMS Blog',
+    url: 'https://www.cms.gov/blog/feed',
+    category: 'policy-regulatory',
   },
-
-  // Quality & Outcomes
   {
-    name: 'AHRQ News',
-    url: 'https://www.ahrq.gov/rss/news.xml',
+    name: 'Beckers Hospital Review',
+    url: 'https://www.beckershospitalreview.com/rss/all-news.html',
+    category: 'general',
+  },
+  {
+    name: 'Beckers Payer Issues',
+    url: 'https://www.beckershospitalreview.com/rss/payer-issues.html',
+    category: 'payer-provider',
+  },
+  {
+    name: 'Beckers Health IT',
+    url: 'https://www.beckershospitalreview.com/rss/healthcare-information-technology.html',
+    category: 'ai-tech',
+  },
+  {
+    name: 'American Hospital Association News',
+    url: 'https://www.aha.org/news/rss',
+    category: 'policy-regulatory',
+  },
+  {
+    name: 'Advisory Board',
+    url: 'https://www.advisory.com/daily-briefing/rss',
+    category: 'general',
+  },
+  {
+    name: 'Modern Healthcare',
+    url: 'https://www.modernhealthcare.com/section/rss',
+    category: 'general',
+  },
+  {
+    name: 'NEJM - Health Policy',
+    url: 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss',
     category: 'quality-outcomes',
   },
   {
-    name: 'NCQA Blog',
-    url: 'https://www.ncqa.org/blog/feed/',
+    name: 'JAMA Network',
+    url: 'https://jamanetwork.com/rss/site_3/67.xml',
     category: 'quality-outcomes',
-  },
-
-  // Research & Think Tanks
-  {
-    name: 'KFF',
-    url: 'https://www.kff.org/feed/',
-    category: 'policy-regulatory',
-  },
-  {
-    name: 'Commonwealth Fund',
-    url: 'https://www.commonwealthfund.org/rss',
-    category: 'policy-regulatory',
-  },
-
-  // Medicare/Medicaid Specific
-  {
-    name: 'Medicare Blog',
-    url: 'https://blog.medicare.gov/feed/',
-    category: 'policy-regulatory',
   },
 ];
 
@@ -119,5 +95,5 @@ export function getFeedsByCategory(category: string): FeedConfig[] {
 
 // Get all unique categories
 export function getCategories(): string[] {
-return Array.from(new Set(RSS_FEEDS.map((feed) => feed.category)));
+  return Array.from(new Set(RSS_FEEDS.map((feed) => feed.category)));
 }
