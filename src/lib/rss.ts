@@ -64,7 +64,7 @@ async function fetchFeed(feedUrl: string, sourceName: string): Promise<Article[]
       // These will be filled in by scoring
       score: 0,
       tier: 'low' as const,
-      category: 'operations' as const,
+      category: 'general' as const,
       keywords: [],
     }));
   } catch (error) {
