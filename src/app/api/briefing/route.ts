@@ -37,72 +37,67 @@ async function fetchFeed(feed: typeof RSS_FEEDS[0]): Promise<RawArticle[]> {
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const hoursParam = searchParams.get('hours');
-  const hours = hoursParam ? parseInt(hoursParam, 10) : 24;
-
   try {
+    const { searchParams } = new URL(request.url);
+    const hoursFilter = parseInt(searchParams.get('hours') || '24', 10);
+
     // Fetch all feeds in parallel
     const feedPromises = RSS_FEEDS.map(fetchFeed);
-    const feedResults = await Promise.allSettled(feedPromises);
+    const results = await Promise.all(feedPromises);
 
-    // Collect all articles
-    let allArticles: RawArticle[] = [];
+    // Flatten results
+    let allArticles = results.flat();
 
-    feedResults.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value.length > 0) {
-        allArticles = allArticles.concat(result.value);
-      }
-    });
-
-    // If no articles fetched, use sample data
-    if (allArticles.length === 0) {
-      console.log('No articles fetched, using sample data');
-      allArticles = SAMPLE_ARTICLES;
-    }
+    console.log(`Total articles fetched: ${allArticles.length}`);
 
     // Filter by time range
-    const cutoff = new Date();
-    cutoff.setHours(cutoff.getHours() - hours);
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - hoursFilter);
 
-    const recentArticles = allArticles.filter((article) => {
+    const filteredArticles = allArticles.filter((article) => {
       try {
         const pubDate = new Date(article.pubDate);
-        return pubDate >= cutoff;
+        return pubDate >= cutoffTime;
       } catch {
-        return true; // Include if date parsing fails
+        return true;
       }
     });
 
-    // Process and score articles
-    const processedArticles = processArticles(
-      recentArticles.length > 0 ? recentArticles : allArticles
-    );
+    console.log(`Articles after time filter: ${filteredArticles.length}`);
+
+    // Convert to Article format and process with scoring
+    const articlesForScoring = filteredArticles.map((article, index) => ({
+      id: `article-${index}-${Date.now()}`,
+      title: article.title,
+      link: article.link,
+      description: article.description,
+      pubDate: article.pubDate,
+      source: article.source,
+      sourceUrl: article.sourceUrl,
+      category: 'general' as const,
+      score: 0,
+      tier: 'low' as const,
+      keywords: [] as string[],
+    }));
+
+    // Score and sort articles
+    const processedArticles = processArticles(articlesForScoring);
 
     return NextResponse.json({
       articles: processedArticles,
       meta: {
         totalFetched: allArticles.length,
-        afterTimeFilter: recentArticles.length,
+        afterTimeFilter: filteredArticles.length,
         processed: processedArticles.length,
-        hoursFilter: hours,
+        hoursFilter,
         timestamp: new Date().toISOString(),
       },
     });
   } catch (error) {
     console.error('Briefing API error:', error);
-
-    // Return sample data on error
-    const processedSamples = processArticles(SAMPLE_ARTICLES);
-
-    return NextResponse.json({
-      articles: processedSamples,
-      meta: {
-        error: 'Failed to fetch feeds, using sample data',
-        totalFetched: SAMPLE_ARTICLES.length,
-        processed: processedSamples.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
+    return NextResponse.json(
+      { error: 'Failed to fetch briefing', details: String(error) },
+      { status: 500 }
+    );
   }
 }
