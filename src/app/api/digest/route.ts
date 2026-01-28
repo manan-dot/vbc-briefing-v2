@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { processArticles } from '@/lib/scoring';
 import { fetchAllFeeds } from '@/lib/rss';
-import { ScoringResult } from '@/types';
+import { Article } from '@/types';
 
 // Initialize Resend lazily to avoid build-time errors
 const getResendClient = () => {
@@ -19,18 +19,18 @@ const DIGEST_RECIPIENTS: string[] = [
 ];
 
 // Generate HTML email content
-function generateEmailHTML(articles: ScoringResult[]): string {
+function generateEmailHTML(articles: Article[]): string {
   const highPriority = articles.filter(a => a.tier === 'high').slice(0, 5);
   const mediumPriority = articles.filter(a => a.tier === 'medium').slice(0, 5);
 
-  const formatArticle = (article: ScoringResult) => `
+  const formatArticle = (article: Article) => `
     <tr>
       <td style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
         <a href="${article.link}" style="color: #059669; text-decoration: none; font-weight: 600; font-size: 16px;">
           ${article.title}
         </a>
         <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-          ${article.summary.slice(0, 200)}${article.summary.length > 200 ? '...' : ''}
+          ${article.description.slice(0, 200)}${article.description.length > 200 ? '...' : ''}
         </p>
         <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 12px;">
           ${article.source} • Score: ${article.score}
@@ -99,7 +99,7 @@ function generateEmailHTML(articles: ScoringResult[]): string {
 }
 
 // Generate plain text version
-function generateEmailText(articles: ScoringResult[]): string {
+function generateEmailText(articles: Article[]): string {
   const highPriority = articles.filter(a => a.tier === 'high').slice(0, 5);
   const mediumPriority = articles.filter(a => a.tier === 'medium').slice(0, 5);
 
