@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { scoreAndSortArticles } from '@/lib/scoring';
-import { fetchAllFeeds } from '@/lib/rss';
+import { fetchAllFeeds } from '@/lib/rss-feeds';
 import { ScoredArticle } from '@/types';
 
 // Initialize Resend lazily to avoid build-time errors
