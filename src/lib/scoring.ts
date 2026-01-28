@@ -258,7 +258,7 @@ export function scoreArticle(
     score,
     tier,
     category,
-    matchedKeywords: [...new Set(matchedKeywords)] // Remove duplicates
+matchedKeywords: Array.from(new Set(matchedKeywords))
   };
 }
 
